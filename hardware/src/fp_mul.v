@@ -6,7 +6,7 @@ module fp_mul
     input             rst,
 
     input             start,
-    output            done,
+    output reg        done,
 
     input [31:0]      op_a,
     input [31:0]      op_b,
@@ -18,28 +18,14 @@ module fp_mul
     output reg [31:0] res
     );
 
-   localparam END_COUNT = 2;
-
-   reg [1:0]     counter;
-   assign done = (counter == END_COUNT)? 1'b1: 1'b0;
-   always @(posedge clk, posedge rst) begin
-      if (rst) begin
-         counter <= END_COUNT;
-      end else if (start) begin
-         counter <= 0;
-      end else if (~done) begin
-         counter <= counter + 1'b1;
-      end
-   end
-
    // Unpack
-   wire [23:0]            A_Mantissa = {1'b1, op_a[22:0]};
-   wire [7:0]             A_Exponent = op_a[30:23];
-   wire                   A_sign = op_a[31];
+   wire [23:0]        A_Mantissa = {1'b1, op_a[22:0]};
+   wire [7:0]         A_Exponent = op_a[30:23];
+   wire               A_sign = op_a[31];
 
-   wire [23:0]            B_Mantissa = {1'b1, op_b[22:0]};
-   wire [7:0]             B_Exponent = op_b[30:23];
-   wire                   B_sign = op_b[31];
+   wire [23:0]        B_Mantissa = {1'b1, op_b[22:0]};
+   wire [7:0]         B_Exponent = op_b[30:23];
+   wire               B_sign = op_b[31];
 
    // pipeline stage 1
    reg                A_sign_reg;
@@ -76,9 +62,9 @@ module fp_mul
    end
 
    // Multiplication
-   wire                   Temp_sign = A_sign_reg ^ B_sign_reg;
-   wire [7:0]             Temp_Exponent = A_Exponent_reg + B_Exponent_reg - 127;
-   wire [47:0]            Temp_Mantissa = A_Mantissa_reg * B_Mantissa_reg;
+   wire               Temp_sign = A_sign_reg ^ B_sign_reg;
+   wire [7:0]         Temp_Exponent = A_Exponent_reg + B_Exponent_reg - 127;
+   wire [47:0]        Temp_Mantissa = A_Mantissa_reg * B_Mantissa_reg;
 
    // pipeline stage 2
    reg                Temp_sign_reg;
@@ -103,18 +89,20 @@ module fp_mul
    end
 
    // Normalize
-   wire [22:0]            Mantissa = Temp_Mantissa_reg[47]? Temp_Mantissa_reg[46:24] : Temp_Mantissa_reg[45:23];
-   wire [7:0]             Exponent = Temp_Mantissa_reg[47]? Temp_Exponent_reg + 1'b1 : Temp_Exponent_reg;
-   wire                   Sign = Temp_sign_reg;
+   wire [22:0]        Mantissa = Temp_Mantissa_reg[47]? Temp_Mantissa_reg[46:24] : Temp_Mantissa_reg[45:23];
+   wire [7:0]         Exponent = Temp_Mantissa_reg[47]? Temp_Exponent_reg + 1'b1 : Temp_Exponent_reg;
+   wire               Sign = Temp_sign_reg;
 
    // Pack
+
+   // pipeline stage 3
    always @(posedge clk) begin
       if (rst) begin
          res <= 32'd0;
-         //done <= 1'b0;
+         done <= 1'b0;
       end else begin
          res <= {Sign, Exponent, Mantissa};
-         //done <= done_int2;
+         done <= done_int2;
       end
    end
 
