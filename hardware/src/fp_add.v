@@ -29,16 +29,13 @@ module fp_add
    wire [7:0]         B_Exponent = comp? op_b[30:23] : op_a[30:23];
    wire               B_sign = comp? op_b[31] : op_a[31];
 
-   // Align significants
-   wire [7:0]         diff_Exponent = A_Exponent - B_Exponent;
-   wire [23:0]        B_Mantissa_in = B_Mantissa >> diff_Exponent;
-
    // pipeline stage 1
    reg                A_sign_reg;
    reg [7:0]          A_Exponent_reg;
    reg [23:0]         A_Mantissa_reg;
 
    reg                B_sign_reg;
+   reg [7:0]          B_Exponent_reg;
    reg [23:0]         B_Mantissa_reg;
 
    reg                done_int;
@@ -49,6 +46,7 @@ module fp_add
          A_Mantissa_reg <= 24'd0;
 
          B_sign_reg <= 1'b0;
+         B_Exponent_reg <= 8'd0;
          B_Mantissa_reg <= 24'd0;
 
          done_int <= 1'b0;
@@ -58,42 +56,78 @@ module fp_add
          A_Mantissa_reg <= A_Mantissa;
 
          B_sign_reg <= B_sign;
-         B_Mantissa_reg <= B_Mantissa_in;
+         B_Exponent_reg <= B_Exponent;
+         B_Mantissa_reg <= B_Mantissa;
 
          done_int <= start;
       end
    end
 
-   // Addition
-   wire [24:0]        Temp = (A_sign_reg ~^ B_sign_reg)? A_Mantissa_reg + B_Mantissa_reg:
-                                                         A_Mantissa_reg - B_Mantissa_reg;
-   wire               carry = Temp[24];
+   // Align significants
+   wire [7:0]         diff_Exponent = A_Exponent_reg - B_Exponent_reg;
+   wire [23:0]        B_Mantissa_in = B_Mantissa_reg >> diff_Exponent;
 
    // pipeline stage 2
    reg                A_sign_reg2;
    reg [7:0]          A_Exponent_reg2;
+   reg [23:0]         A_Mantissa_reg2;
 
-   reg [23:0]         Temp_reg;
-   reg                carry_reg;
+   reg                B_sign_reg2;
+   reg [23:0]         B_Mantissa_reg2;
 
    reg                done_int2;
    always @(posedge clk) begin
       if (rst) begin
          A_sign_reg2 <= 1'b0;
          A_Exponent_reg2 <= 8'd0;
+         A_Mantissa_reg2 <= 24'd0;
 
-         Temp_reg <= 24'd0;
-         carry_reg <= 1'b0;
+         B_sign_reg2 <= 1'b0;
+         B_Mantissa_reg2 <= 24'd0;
 
          done_int2 <= 1'b0;
       end else begin
          A_sign_reg2 <= A_sign_reg;
          A_Exponent_reg2 <= A_Exponent_reg;
+         A_Mantissa_reg2 <= A_Mantissa_reg;
+
+         B_sign_reg2 <= B_sign_reg;
+         B_Mantissa_reg2 <= B_Mantissa_in;
+
+         done_int2 <= done_int;
+      end
+   end
+
+   // Addition
+   wire [24:0]        Temp = (A_sign_reg2 ~^ B_sign_reg2)? A_Mantissa_reg2 + B_Mantissa_reg2:
+                                                           A_Mantissa_reg2 - B_Mantissa_reg2;
+   wire               carry = Temp[24];
+
+   // pipeline stage 3
+   reg                A_sign_reg3;
+   reg [7:0]          A_Exponent_reg3;
+
+   reg [23:0]         Temp_reg;
+   reg                carry_reg;
+
+   reg                done_int3;
+   always @(posedge clk) begin
+      if (rst) begin
+         A_sign_reg3 <= 1'b0;
+         A_Exponent_reg3 <= 8'd0;
+
+         Temp_reg <= 24'd0;
+         carry_reg <= 1'b0;
+
+         done_int3 <= 1'b0;
+      end else begin
+         A_sign_reg3 <= A_sign_reg2;
+         A_Exponent_reg3 <= A_Exponent_reg2;
 
          Temp_reg <= Temp[23:0];
          carry_reg <= carry;
 
-         done_int2 <= done_int;
+         done_int3 <= done_int2;
       end
    end
 
@@ -109,10 +143,10 @@ module fp_add
       );
 
    wire [23:0]        Temp_Mantissa = carry_reg? Temp_reg[23:1] : Temp_reg << lzc;
-   wire [7:0]         exp_adjust = carry_reg? A_Exponent_reg2 + 1'b1 : A_Exponent_reg2 - lzc;
+   wire [7:0]         exp_adjust = carry_reg? A_Exponent_reg3 + 1'b1 : A_Exponent_reg3 - lzc;
 
    // Pack
-   wire               Sign = A_sign_reg2;
+   wire               Sign = A_sign_reg3;
    wire [22:0]        Mantissa = Temp_Mantissa[22:0];
    wire [7:0]         Exponent = exp_adjust;
 
@@ -123,7 +157,7 @@ module fp_add
          done <= 1'b0;
       end else begin
          res <= {Sign, Exponent, Mantissa};
-         done <= done_int2;
+         done <= done_int3;
       end
    end
 
