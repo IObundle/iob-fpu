@@ -18,7 +18,7 @@ module fp_div
     output reg [31:0] res
     );
 
-   localparam END_COUNT = 50;
+   localparam END_COUNT = 51;
 
    reg [5:0]     counter;
    assign done = (counter == END_COUNT)? 1'b1: 1'b0;
@@ -80,9 +80,9 @@ module fp_div
    // Division
    wire               Temp_sign = A_sign_reg ^ B_sign_reg;
    wire [7:0]         Temp_Exponent = A_Exponent_reg - B_Exponent_reg + 127;
-   wire [47:0]        Temp_Mantissa; // = A_Mantissa_reg / B_Mantissa_reg;
+   wire [48:0]        Temp_Mantissa; // = A_Mantissa_reg / B_Mantissa_reg;
    div_serial # (
-                 .DATA_W(48)
+                 .DATA_W(49)
                  )
    div_serial (
                .clk       (clk),
@@ -91,8 +91,8 @@ module fp_div
                .start     (start),
                .done      (),
 
-               .dividend  ({1'b0, A_Mantissa, 23'd0}),
-               .divisor   ({24'd0, B_Mantissa}),
+               .dividend  ({1'b0, A_Mantissa, 24'd0}),
+               .divisor   ({25'd0, B_Mantissa}),
                .quotient  (Temp_Mantissa),
                .remainder ()
                );
@@ -100,7 +100,7 @@ module fp_div
    // pipeline stage 2
    reg                Temp_sign_reg;
    reg [7:0]          Temp_Exponent_reg;
-   reg [23:0]         Temp_Mantissa_reg;
+   reg [24:0]         Temp_Mantissa_reg;
 
    reg                done_int2;
    always @(posedge clk) begin
@@ -113,7 +113,7 @@ module fp_div
       end else begin
          Temp_sign_reg <= Temp_sign;
          Temp_Exponent_reg <= Temp_Exponent;
-         Temp_Mantissa_reg <= Temp_Mantissa[23:0];
+         Temp_Mantissa_reg <= Temp_Mantissa[24:0];
 
          done_int2 <= done_int;
       end
@@ -126,11 +126,11 @@ module fp_div
          )
    clz0
      (
-      .data_in  (Temp_Mantissa_reg),
+      .data_in  (Temp_Mantissa_reg[24:1]),
       .data_out (lzc)
       );
 
-   wire [23:0]        Mantissa = Temp_Mantissa_reg << lzc;
+   wire [23:0]        Mantissa = (Temp_Mantissa_reg << lzc) + Temp_Mantissa_reg[0];
    wire [7:0]         Exponent = Temp_Exponent_reg - lzc;
    wire               Sign = Temp_sign_reg;
 
