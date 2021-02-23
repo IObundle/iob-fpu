@@ -7,8 +7,6 @@ RTL_COMPILER:=source /opt/ic_tools/init/init-rc14_25_hf000
 run: fpu_synth.v
 
 fpu_synth.v: $(VHDR) $(VSRC)
-	echo "TOP_MODULE = "
-	echo $(TOP_MODULE)
 	echo "set INCLUDE [list $(INCLUDE)]" > inc.tcl
 	echo "set DEFINE [list $(DEFINE)]" > defs.tcl
 	echo "set VSRC [glob $(VSRC)]" > vsrc.tcl

@@ -12,8 +12,6 @@ echo "DEFINE=" $DEFINE
 echo "\n\n"
 echo "VSRC=" $VSRC
 echo "\n\n"
-echo "TOP_MODULE=" $TOP_MODULE
-echo "\n\n"
 #
 # verilog read
 read_hdl -v2001 -define $DEFINE $VSRC
