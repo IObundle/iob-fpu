@@ -7,7 +7,12 @@ INCLUDE+=$(incdir) $(FPU_INC_DIR)
 VHDR+=$(wildcard $(FPU_INC_DIR)/*.vh)
 
 # sources
-VSRC+=$(wildcard $(FPU_HW_DIR)/src/*.v)
+VSRC+=$(wildcard $(FPU_HW_DIR)/src/*.v) \
+$(DIV_DIR)/hardware/src/div_subshift.v
+
+ifneq ($(FPU),)
+VSRC:=$(filter-out $(FPU_HW_DIR)/src/fpu.v,$(VSRC))
+endif
 
 clean_hw:
 	@rm -rf $(FPU_HW_DIR)/fpga/vivado/XCKU $(FPU_HW_DIR)/fpga/quartus/CYCLONEV-GT

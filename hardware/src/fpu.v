@@ -76,9 +76,9 @@ module fpu # (
    wire                             uint2float_start = any_uint2float & ~(any_uint2float_reg & ~ready_reg);
    wire                             float2int_start = any_float2int & ~(any_float2int_reg & ~ready_reg);
    wire                             float2uint_start = any_float2uint & ~(any_float2uint_reg & ~ready_reg);
-   assign start = |{add_start, mul_start, div_start, sqrt_start, min_max_start, cmp_start, int2float_start, uint2float_start, float2int_start, float2uint_start};
+   wire                             start_int = |{add_start, mul_start, div_start, sqrt_start, min_max_start, cmp_start, int2float_start, uint2float_start, float2int_start, float2uint_start};
 
-   wire                             fpu_wait = start | ~done;
+   wire                             fpu_wait = start_int | ~done;
    wire                             ready = done & ~done_reg;
 
    always @* begin
@@ -306,7 +306,7 @@ module fpu # (
       );
 `endif
 
-   assign done = start? 1'b0: done_int;
+   assign done = start_int? 1'b0: done_int;
 
    always @* begin
       res = {DATA_W{1'b0}};
