@@ -18,7 +18,7 @@ module fp_div
     output reg [31:0] res
     );
 
-   localparam END_COUNT = 51;
+   localparam END_COUNT = 53;
 
    reg [5:0]     counter;
    assign done = (counter == END_COUNT)? 1'b1: 1'b0;
@@ -81,21 +81,21 @@ module fp_div
    wire               Temp_sign = A_sign_reg ^ B_sign_reg;
    wire [7:0]         Temp_Exponent = A_Exponent_reg - B_Exponent_reg + 127;
    wire [48:0]        Temp_Mantissa; // = A_Mantissa_reg / B_Mantissa_reg;
-   div_serial # (
-                 .DATA_W(49)
-                 )
-   div_serial (
-               .clk       (clk),
-               .rst       (rst),
+   div_subshift # (
+                   .DATA_W(49)
+                   )
+   div_subshift (
+                 .clk       (clk),
 
-               .start     (start),
-               .done      (),
+                 .en        (~start),
+                 .sign      (1'b0),
+                 .done      (),
 
-               .dividend  ({1'b0, A_Mantissa, 24'd0}),
-               .divisor   ({25'd0, B_Mantissa}),
-               .quotient  (Temp_Mantissa),
-               .remainder ()
-               );
+                 .dividend  ({1'b0, A_Mantissa, 24'd0}),
+                 .divisor   ({25'd0, B_Mantissa}),
+                 .quotient  (Temp_Mantissa),
+                 .remainder ()
+                 );
 
    // pipeline stage 2
    reg                Temp_sign_reg;
