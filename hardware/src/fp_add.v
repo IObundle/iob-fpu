@@ -1,53 +1,59 @@
 `timescale 1ns / 1ps
 
-module fp_add
+module fp_add #(
+                parameter DATA_W = 32,
+                parameter EXP_W = 8
+                )
    (
-    input             clk,
-    input             rst,
+    input                   clk,
+    input                   rst,
 
-    input             start,
-    output reg        done,
+    input                   start,
+    output reg              done,
 
-    input [31:0]      op_a,
-    input [31:0]      op_b,
+    input [DATA_W-1:0]      op_a,
+    input [DATA_W-1:0]      op_b,
 
-    output            overflow,
-    output            underflow,
-    output            exception,
+    output                  overflow,
+    output                  underflow,
+    output                  exception,
 
-    output reg [31:0] res
+    output reg [DATA_W-1:0] res
     );
 
+   localparam MAN_W = DATA_W-EXP_W;
+   localparam EXTRA = 3;
+
    // Unpack
-   wire               comp = (op_a[30:23] >= op_b[30:23])? 1'b1 : 1'b0;
+   wire                     comp = (op_a[DATA_W-2 -: EXP_W] >= op_b[DATA_W-2 -: EXP_W])? 1'b1 : 1'b0;
 
-   wire [23:0]        A_Mantissa = comp? {1'b1, op_a[22:0]} : {1'b1, op_b[22:0]};
-   wire [7:0]         A_Exponent = comp? op_a[30:23] : op_b[30:23];
-   wire               A_sign = comp? op_a[31] : op_b[31];
+   wire [MAN_W-1:0]         A_Mantissa = comp? {1'b1, op_a[MAN_W-2:0]} : {1'b1, op_b[MAN_W-2:0]};
+   wire [EXP_W-1:0]         A_Exponent = comp? op_a[DATA_W-2 -: EXP_W] : op_b[DATA_W-2 -: EXP_W];
+   wire                     A_sign = comp? op_a[DATA_W-1] : op_b[DATA_W-1];
 
-   wire [23:0]        B_Mantissa = comp? {1'b1, op_b[22:0]} : {1'b1, op_a[22:0]};
-   wire [7:0]         B_Exponent = comp? op_b[30:23] : op_a[30:23];
-   wire               B_sign = comp? op_b[31] : op_a[31];
+   wire [MAN_W-1:0]         B_Mantissa = comp? {1'b1, op_b[MAN_W-2:0]} : {1'b1, op_a[MAN_W-2:0]};
+   wire [EXP_W-1:0]         B_Exponent = comp? op_b[DATA_W-2 -: EXP_W] : op_a[DATA_W-2 -: EXP_W];
+   wire                     B_sign = comp? op_b[DATA_W-1] : op_a[DATA_W-1];
 
    // pipeline stage 1
-   reg                A_sign_reg;
-   reg [7:0]          A_Exponent_reg;
-   reg [23:0]         A_Mantissa_reg;
+   reg                      A_sign_reg;
+   reg [EXP_W-1:0]          A_Exponent_reg;
+   reg [MAN_W-1:0]          A_Mantissa_reg;
 
-   reg                B_sign_reg;
-   reg [7:0]          B_Exponent_reg;
-   reg [23:0]         B_Mantissa_reg;
+   reg                      B_sign_reg;
+   reg [EXP_W-1:0]          B_Exponent_reg;
+   reg [MAN_W-1:0]          B_Mantissa_reg;
 
-   reg                done_int;
+   reg                      done_int;
    always @(posedge clk) begin
       if (rst) begin
          A_sign_reg <= 1'b0;
-         A_Exponent_reg <= 8'd0;
-         A_Mantissa_reg <= 24'd0;
+         A_Exponent_reg <= {EXP_W{1'b0}};
+         A_Mantissa_reg <= {MAN_W{1'b0}};
 
          B_sign_reg <= 1'b0;
-         B_Exponent_reg <= 8'd0;
-         B_Mantissa_reg <= 24'd0;
+         B_Exponent_reg <= {EXP_W{1'b0}};
+         B_Mantissa_reg <= {MAN_W{1'b0}};
 
          done_int <= 1'b0;
       end else begin
@@ -64,35 +70,35 @@ module fp_add
    end
 
    // Align significants
-   wire [7:0]         diff_Exponent = A_Exponent_reg - B_Exponent_reg;
-   wire [99:0]        B_Mantissa_in = {B_Mantissa_reg, 76'd0} >> diff_Exponent;
+   wire [EXP_W-1:0]         diff_Exponent = A_Exponent_reg - B_Exponent_reg;
+   wire [MAN_W+76-1:0]      B_Mantissa_in = {B_Mantissa_reg, 76'd0} >> diff_Exponent;
 
    // Extra bits
-   wire               guard_bit = B_Mantissa_in[75];
-   wire               round_bit = B_Mantissa_in[74];
-   wire               sticky_bit = |B_Mantissa_in[73:0];
+   wire                     guard_bit = B_Mantissa_in[75];
+   wire                     round_bit = B_Mantissa_in[74];
+   wire                     sticky_bit = |B_Mantissa_in[73:0];
 
    // pipeline stage 2
-   reg                A_sign_reg2;
-   reg [7:0]          A_Exponent_reg2;
-   reg [23:0]         A_Mantissa_reg2;
+   reg                      A_sign_reg2;
+   reg [EXP_W-1:0]          A_Exponent_reg2;
+   reg [MAN_W-1:0]          A_Mantissa_reg2;
 
-   reg                B_sign_reg2;
-   reg [23:0]         B_Mantissa_reg2;
+   reg                      B_sign_reg2;
+   reg [MAN_W-1:0]          B_Mantissa_reg2;
 
-   reg                guard_bit_reg;
-   reg                round_bit_reg;
-   reg                sticky_bit_reg;
+   reg                      guard_bit_reg;
+   reg                      round_bit_reg;
+   reg                      sticky_bit_reg;
 
-   reg                done_int2;
+   reg                      done_int2;
    always @(posedge clk) begin
       if (rst) begin
          A_sign_reg2 <= 1'b0;
-         A_Exponent_reg2 <= 8'd0;
-         A_Mantissa_reg2 <= 24'd0;
+         A_Exponent_reg2 <= {EXP_W{1'b0}};
+         A_Mantissa_reg2 <= {MAN_W{1'b0}};
 
          B_sign_reg2 <= 1'b0;
-         B_Mantissa_reg2 <= 24'd0;
+         B_Mantissa_reg2 <= {MAN_W{1'b0}};
 
          guard_bit_reg <= 1'b0;
          round_bit_reg <= 1'b0;
@@ -105,7 +111,7 @@ module fp_add
          A_Mantissa_reg2 <= A_Mantissa_reg;
 
          B_sign_reg2 <= B_sign_reg;
-         B_Mantissa_reg2 <= B_Mantissa_in[76 +: 24];
+         B_Mantissa_reg2 <= B_Mantissa_in[76 +: MAN_W];
 
          guard_bit_reg <= guard_bit;
          round_bit_reg <= round_bit;
@@ -116,24 +122,24 @@ module fp_add
    end
 
    // Addition
-   wire [24:0]        Temp = (A_sign_reg2 ~^ B_sign_reg2)? A_Mantissa_reg2 + B_Mantissa_reg2:
-                                                           A_Mantissa_reg2 - B_Mantissa_reg2;
-   wire               carry = Temp[24];
+   wire [MAN_W:0]           Temp = (A_sign_reg2 ~^ B_sign_reg2)? A_Mantissa_reg2 + B_Mantissa_reg2:
+                                                                 A_Mantissa_reg2 - B_Mantissa_reg2;
+   wire                     carry = Temp[MAN_W];
 
    // pipeline stage 3
-   reg                A_sign_reg3;
-   reg [7:0]          A_Exponent_reg3;
+   reg                      A_sign_reg3;
+   reg [EXP_W-1:0]          A_Exponent_reg3;
 
-   reg [26:0]         Temp_reg;
-   reg                carry_reg;
+   reg [MAN_W+EXTRA-1:0]    Temp_reg;
+   reg                      carry_reg;
 
-   reg                done_int3;
+   reg                      done_int3;
    always @(posedge clk) begin
       if (rst) begin
          A_sign_reg3 <= 1'b0;
-         A_Exponent_reg3 <= 8'd0;
+         A_Exponent_reg3 <= {EXP_W{1'b0}};
 
-         Temp_reg <= 27'd0;
+         Temp_reg <= {(MAN_W+EXTRA){1'b0}};
          carry_reg <= 1'b0;
 
          done_int3 <= 1'b0;
@@ -141,7 +147,7 @@ module fp_add
          A_sign_reg3 <= A_sign_reg2;
          A_Exponent_reg3 <= A_Exponent_reg2;
 
-         Temp_reg <= {Temp[23:0], guard_bit_reg, round_bit_reg, sticky_bit_reg};
+         Temp_reg <= {Temp[MAN_W-1:0], guard_bit_reg, round_bit_reg, sticky_bit_reg};
          carry_reg <= carry;
 
          done_int3 <= done_int2;
@@ -149,9 +155,9 @@ module fp_add
    end
 
    // Normalize
-   wire [4:0] lzc;
+   wire [$clog2(MAN_W+EXTRA+1)-1:0] lzc;
    clz #(
-         .DATA_W(27)
+         .DATA_W(MAN_W+EXTRA)
          )
    clz0
      (
@@ -159,40 +165,40 @@ module fp_add
       .data_out (lzc)
       );
 
-   wire [26:0]        Temp_Mantissa = carry_reg? {1'b1, Temp_reg[26:1]} : Temp_reg << lzc;
-   wire [7:0]         exp_adjust = carry_reg? A_Exponent_reg3 + 1'b1 : A_Exponent_reg3 - lzc;
+   wire [MAN_W+EXTRA-1:0]   Temp_Mantissa = carry_reg? {1'b1, Temp_reg[MAN_W+EXTRA-1:1]} : Temp_reg << lzc;
+   wire [EXP_W-1:0]         exp_adjust = carry_reg? A_Exponent_reg3 + 1'b1 : A_Exponent_reg3 - lzc;
 
    // pipeline stage 4
-   reg                A_sign_reg4;
+   reg                      A_sign_reg4;
 
-   reg [7:0]          exp_adjust_reg;
-   reg [26:0]         Temp_Mantissa_reg;
+   reg [EXP_W-1:0]          exp_adjust_reg;
+   reg [MAN_W+EXTRA-1:0]    Temp_Mantissa_reg;
 
-   reg                done_int4;
+   reg                      done_int4;
    always @(posedge clk) begin
       if (rst) begin
          A_sign_reg4 <= 1'b0;
 
-         exp_adjust_reg <= 8'd0;
-         Temp_Mantissa_reg <= 27'd0;
+         exp_adjust_reg <= {EXP_W{1'b0}};
+         Temp_Mantissa_reg <= {(MAN_W+EXTRA){1'b0}};
 
          done_int4 <= 1'b0;
       end else begin
          A_sign_reg4 <= A_sign_reg3;
 
          exp_adjust_reg <= exp_adjust;
-         Temp_Mantissa_reg <= {Temp_Mantissa[26:1], Temp_Mantissa[0] | Temp_reg[0]};
+         Temp_Mantissa_reg <= {Temp_Mantissa[MAN_W+EXTRA-1:1], Temp_Mantissa[0] | Temp_reg[0]};
 
          done_int4 <= done_int3;
       end
    end
 
    // Round
-   wire [23:0]        Temp_Mantissa_rnd;
-   wire [7:0]         exp_adjust_rnd;
+   wire [MAN_W-1:0]         Temp_Mantissa_rnd;
+   wire [EXP_W-1:0]         exp_adjust_rnd;
    round #(
-           .DATA_W (24),
-           .EXP_W  (8)
+           .DATA_W (MAN_W),
+           .EXP_W  (EXP_W)
            )
    round0
      (
@@ -204,14 +210,14 @@ module fp_add
       );
 
    // Pack
-   wire [22:0]        Mantissa = Temp_Mantissa_rnd[22:0];
-   wire [7:0]         Exponent = exp_adjust_rnd;
-   wire               Sign = A_sign_reg4;
+   wire [MAN_W-2:0]         Mantissa = Temp_Mantissa_rnd[MAN_W-2:0];
+   wire [EXP_W-1:0]         Exponent = exp_adjust_rnd;
+   wire                     Sign = A_sign_reg4;
 
    // pipeline stage 5
    always @(posedge clk) begin
       if (rst) begin
-         res <= 32'd0;
+         res <= {DATA_W{1'b0}};
          done <= 1'b0;
       end else begin
          res <= {Sign, Exponent, Mantissa};
