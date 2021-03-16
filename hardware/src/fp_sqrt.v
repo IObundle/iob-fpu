@@ -17,7 +17,7 @@ module fp_sqrt
     output reg [31:0] res
     );
 
-   localparam END_COUNT = 15;
+   localparam END_COUNT = 30;
 
    reg [4:0]     counter;
    assign done = (counter == END_COUNT)? 1'b1: 1'b0;
@@ -61,9 +61,9 @@ module fp_sqrt
    // Division
    wire               Temp_sign = A_sign_reg;
    wire [7:0]         Temp_Exponent = ((A_Exponent_reg - 127) >> 1) + 127;
-   wire [12:0]        Temp_Mantissa; // = sqrt(A_Mantissa_reg);
+   wire [26:0]        Temp_Mantissa; // = sqrt(A_Mantissa_reg);
    int_sqrt # (
-               .DATA_W(26)
+               .DATA_W(54)
                )
    int_sqrt (
              .clk   (clk),
@@ -72,27 +72,27 @@ module fp_sqrt
              .start (start),
              .done  (),
 
-             .op    ({1'b0, A_Mantissa, 1'b0}),
+             .op    ({1'b0, A_Mantissa, 29'd0}),
              .res   (Temp_Mantissa)
              );
 
    // pipeline stage 2
    reg                Temp_sign_reg;
    reg [7:0]          Temp_Exponent_reg;
-   reg [23:0]         Temp_Mantissa_reg;
+   reg [26:0]         Temp_Mantissa_reg;
 
    reg                done_int2;
    always @(posedge clk) begin
       if (rst) begin
          Temp_sign_reg <= 1'b0;
          Temp_Exponent_reg <= 8'd0;
-         Temp_Mantissa_reg <= 24'd0;
+         Temp_Mantissa_reg <= 27'd0;
 
          done_int2 <= 1'b0;
       end else begin
          Temp_sign_reg <= Temp_sign;
          Temp_Exponent_reg <= Temp_Exponent;
-         Temp_Mantissa_reg <= {Temp_Mantissa, 11'd0};
+         Temp_Mantissa_reg <= Temp_Mantissa;
 
          done_int2 <= done_int;
       end
@@ -101,7 +101,7 @@ module fp_sqrt
    // Normalize
    wire [4:0] lzc;
    clz #(
-         .DATA_W(24)
+         .DATA_W(27)
          )
    clz0
      (
@@ -109,19 +109,62 @@ module fp_sqrt
       .data_out (lzc)
       );
 
-   wire [23:0]        Mantissa = Temp_Mantissa_reg << lzc;
-   wire [7:0]         Exponent = Temp_Exponent_reg - lzc;
-   wire               Sign = Temp_sign_reg;
-
-   // Pack
+   wire [26:0]        Mantissa_int = Temp_Mantissa_reg << lzc;
+   wire [7:0]         Exponent_int = Temp_Exponent_reg - lzc;
 
    // pipeline stage 3
+   reg                Temp_sign_reg2;
+
+   reg [7:0]          Exponent_reg;
+   reg [26:0]         Mantissa_reg;
+
+   reg                done_int3;
+   always @(posedge clk) begin
+      if (rst) begin
+         Temp_sign_reg2 <= 1'b0;
+
+         Exponent_reg <= 8'd0;
+         Mantissa_reg <= 27'd0;
+
+         done_int3 <= 1'b0;
+      end else begin
+         Temp_sign_reg2 <= Temp_sign_reg;
+
+         Exponent_reg <= Exponent_int;
+         Mantissa_reg <= {Mantissa_int[26:1], Temp_Mantissa_reg[0]};
+
+         done_int3 <= done_int2;
+      end
+   end
+
+   // Round
+   wire [23:0]        Mantissa_rnd;
+   wire [7:0]         Exponent_rnd;
+   round #(
+           .DATA_W (24),
+           .EXP_W  (8)
+           )
+   round0
+     (
+      .exponent     (Exponent_reg),
+      .mantissa     (Mantissa_reg),
+
+      .exponent_rnd (Exponent_rnd),
+      .mantissa_rnd (Mantissa_rnd)
+      );
+
+   // Pack
+   wire [22:0]        Mantissa = Mantissa_rnd[22:0];
+   wire [7:0]         Exponent = Exponent_rnd;
+   wire               Sign = Temp_sign_reg2;
+
+   // pipeline stage 4
    always @(posedge clk) begin
       if (rst) begin
          res <= 32'd0;
          //done <= 1'b0;
       end else begin
-         res <= {Sign, Exponent, Mantissa[22:0]};
+         res <= {Sign, Exponent, Mantissa};
          //done <= done_int2;
       end
    end
