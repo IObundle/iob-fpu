@@ -185,7 +185,7 @@ module fp_div
          res <= 32'd0;
          //done <= 1'b0;
       end else begin
-         res <= {Sign, Exponent, Mantissa[22:0]};
+         res <= {Sign, Exponent, Mantissa};
          //done <= done_int3;
       end
    end
