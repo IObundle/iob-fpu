@@ -169,7 +169,11 @@ module fpu # (
    wire [DATA_W-1:0] op_b_add_int = any_madd? rs3: rs2;
    wire [DATA_W-1:0] op_b_add = sub? {~op_b_add_int[DATA_W-1], op_b_add_int[DATA_W-2:0]}: op_b_add_int;
 
-   fp_add fp_add0
+   fp_add #(
+            .DATA_W (DATA_W),
+            .EXP_W  (EXP_W)
+            )
+   fp_add0
      (
       .clk(clk),
       .rst(rst),
@@ -182,7 +186,11 @@ module fpu # (
       .res(add_res)
       );
 
-   fp_mul fp_mul0
+   fp_mul #(
+            .DATA_W (DATA_W),
+            .EXP_W  (EXP_W)
+            )
+   fp_mul0
      (
       .clk(clk),
       .rst(rst),
@@ -195,7 +203,11 @@ module fpu # (
       .res(mul_res)
       );
 
-   fp_div fp_div0
+   fp_div #(
+            .DATA_W (DATA_W),
+            .EXP_W  (EXP_W)
+            )
+   fp_div0
      (
       .clk(clk),
       .rst(rst),
@@ -209,7 +221,11 @@ module fpu # (
       );
 
 `ifdef __FULL_FPU__
-   fp_sqrt fp_sqrt0
+   fp_sqrt #(
+             .DATA_W (DATA_W),
+             .EXP_W  (EXP_W)
+             )
+   fp_sqrt0
      (
       .clk(clk),
       .rst(rst),
@@ -222,9 +238,9 @@ module fpu # (
       );
 
    fp_minmax # (
-                 .DATA_W(DATA_W),
-                 .EXP_W(EXP_W)
-                 )
+                .DATA_W(DATA_W),
+                .EXP_W(EXP_W)
+                )
    fp_minmax0
      (
       .clk(clk),
