@@ -1,25 +1,32 @@
 `timescale 1ns / 1ps
 
-module fp_sqrt
+module fp_sqrt #(
+                 parameter DATA_W = 32,
+                 parameter EXP_W = 8
+                )
    (
-    input             clk,
-    input             rst,
+    input                   clk,
+    input                   rst,
 
-    input             start,
-    output            done,
+    input                   start,
+    output                  done,
 
-    input [31:0]      op,
+    input [DATA_W-1:0]      op,
 
-    output            overflow,
-    output            underflow,
-    output            exception,
+    output                  overflow,
+    output                  underflow,
+    output                  exception,
 
-    output reg [31:0] res
+    output reg [DATA_W-1:0] res
     );
 
-   localparam END_COUNT = 30;
+   localparam MAN_W = DATA_W-EXP_W;
+   localparam BIAS = 2**(EXP_W-1)-1;
+   localparam EXTRA = 3;
 
-   reg [4:0]     counter;
+   localparam END_COUNT = MAN_W+EXTRA-1+4; // sqrt cycle count (MAN_W+EXTRA-1) + pipeline stages
+
+   reg [$clog2(END_COUNT+1)-1:0] counter;
    assign done = (counter == END_COUNT)? 1'b1: 1'b0;
    always @(posedge clk, posedge rst) begin
       if (rst) begin
@@ -32,21 +39,21 @@ module fp_sqrt
    end
 
    // Unpack
-   wire [23:0]        A_Mantissa = {1'b1, op[22:0]};
-   wire [7:0]         A_Exponent = op[30:23];
-   wire               A_sign = op[31];
+   wire [MAN_W-1:0]         A_Mantissa = {1'b1, op[MAN_W-2:0]};
+   wire [EXP_W-1:0]         A_Exponent = op[DATA_W-2 -: EXP_W];
+   wire                     A_sign = op[DATA_W-1];
 
    // pipeline stage 1
-   reg                A_sign_reg;
-   reg [7:0]          A_Exponent_reg;
-   reg [23:0]         A_Mantissa_reg;
+   reg                      A_sign_reg;
+   reg [EXP_W-1:0]          A_Exponent_reg;
+   reg [MAN_W-1:0]          A_Mantissa_reg;
 
-   reg                done_int;
+   reg                      done_int;
    always @(posedge clk) begin
       if (rst) begin
          A_sign_reg <= 1'b0;
-         A_Exponent_reg <= 8'd0;
-         A_Mantissa_reg <= 24'd0;
+         A_Exponent_reg <= {EXP_W{1'b0}};
+         A_Mantissa_reg <= {MAN_W{1'b0}};
 
          done_int <= 1'b0;
       end else begin
@@ -59,11 +66,11 @@ module fp_sqrt
    end
 
    // Division
-   wire               Temp_sign = A_sign_reg;
-   wire [7:0]         Temp_Exponent = ((A_Exponent_reg - 127) >> 1) + 127;
-   wire [26:0]        Temp_Mantissa; // = sqrt(A_Mantissa_reg);
+   wire                     Temp_sign = A_sign_reg;
+   wire [EXP_W-1:0]         Temp_Exponent = ((A_Exponent_reg - BIAS) >> 1) + BIAS;
+   wire [MAN_W+EXTRA-1:0]   Temp_Mantissa; // = sqrt(A_Mantissa_reg);
    int_sqrt # (
-               .DATA_W(54)
+               .DATA_W(2*(MAN_W+EXTRA))
                )
    int_sqrt (
              .clk   (clk),
@@ -72,21 +79,21 @@ module fp_sqrt
              .start (start),
              .done  (),
 
-             .op    ({1'b0, A_Mantissa, 29'd0}),
+             .op    ({1'b0, A_Mantissa, {(MAN_W+2*EXTRA-1){1'b0}}}),
              .res   (Temp_Mantissa)
              );
 
    // pipeline stage 2
-   reg                Temp_sign_reg;
-   reg [7:0]          Temp_Exponent_reg;
-   reg [26:0]         Temp_Mantissa_reg;
+   reg                      Temp_sign_reg;
+   reg [EXP_W-1:0]          Temp_Exponent_reg;
+   reg [MAN_W+EXTRA-1:0]    Temp_Mantissa_reg;
 
-   reg                done_int2;
+   reg                      done_int2;
    always @(posedge clk) begin
       if (rst) begin
          Temp_sign_reg <= 1'b0;
-         Temp_Exponent_reg <= 8'd0;
-         Temp_Mantissa_reg <= 27'd0;
+         Temp_Exponent_reg <= {EXP_W{1'b0}};
+         Temp_Mantissa_reg <= {(MAN_W+EXTRA){1'b0}};
 
          done_int2 <= 1'b0;
       end else begin
@@ -99,9 +106,9 @@ module fp_sqrt
    end
 
    // Normalize
-   wire [4:0] lzc;
+   wire [$clog2(MAN_W+EXTRA+1)-1:0] lzc;
    clz #(
-         .DATA_W(27)
+         .DATA_W(MAN_W+EXTRA)
          )
    clz0
      (
@@ -109,40 +116,40 @@ module fp_sqrt
       .data_out (lzc)
       );
 
-   wire [26:0]        Mantissa_int = Temp_Mantissa_reg << lzc;
-   wire [7:0]         Exponent_int = Temp_Exponent_reg - lzc;
+   wire [MAN_W+EXTRA-1:0]   Mantissa_int = Temp_Mantissa_reg << lzc;
+   wire [EXP_W-1:0]         Exponent_int = Temp_Exponent_reg - lzc;
 
    // pipeline stage 3
-   reg                Temp_sign_reg2;
+   reg                      Temp_sign_reg2;
 
-   reg [7:0]          Exponent_reg;
-   reg [26:0]         Mantissa_reg;
+   reg [EXP_W-1:0]          Exponent_reg;
+   reg [MAN_W+EXTRA-1:0]    Mantissa_reg;
 
-   reg                done_int3;
+   reg                      done_int3;
    always @(posedge clk) begin
       if (rst) begin
          Temp_sign_reg2 <= 1'b0;
 
-         Exponent_reg <= 8'd0;
-         Mantissa_reg <= 27'd0;
+         Exponent_reg <= {EXP_W{1'b0}};
+         Mantissa_reg <= {(MAN_W+EXTRA){1'b0}};
 
          done_int3 <= 1'b0;
       end else begin
          Temp_sign_reg2 <= Temp_sign_reg;
 
          Exponent_reg <= Exponent_int;
-         Mantissa_reg <= {Mantissa_int[26:1], Temp_Mantissa_reg[0]};
+         Mantissa_reg <= {Mantissa_int[MAN_W+EXTRA-1:1], Temp_Mantissa_reg[0]};
 
          done_int3 <= done_int2;
       end
    end
 
    // Round
-   wire [23:0]        Mantissa_rnd;
-   wire [7:0]         Exponent_rnd;
+   wire [MAN_W-1:0]         Mantissa_rnd;
+   wire [EXP_W-1:0]         Exponent_rnd;
    round #(
-           .DATA_W (24),
-           .EXP_W  (8)
+           .DATA_W (MAN_W),
+           .EXP_W  (EXP_W)
            )
    round0
      (
@@ -154,14 +161,14 @@ module fp_sqrt
       );
 
    // Pack
-   wire [22:0]        Mantissa = Mantissa_rnd[22:0];
-   wire [7:0]         Exponent = Exponent_rnd;
-   wire               Sign = Temp_sign_reg2;
+   wire [MAN_W-2:0]         Mantissa = Mantissa_rnd[MAN_W-2:0];
+   wire [EXP_W-1:0]         Exponent = Exponent_rnd;
+   wire                     Sign = Temp_sign_reg2;
 
    // pipeline stage 4
    always @(posedge clk) begin
       if (rst) begin
-         res <= 32'd0;
+         res <= {DATA_W{1'b0}};
          //done <= 1'b0;
       end else begin
          res <= {Sign, Exponent, Mantissa};
