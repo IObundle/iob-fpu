@@ -14,7 +14,7 @@ module fp_float2int
    output [31:0] res
    );
 
-   localparam END_COUNT = 2;
+   localparam END_COUNT = 1;
 
    reg [3:0]     counter;
    assign done = (counter == END_COUNT)? 1'b1: 1'b0;
