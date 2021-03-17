@@ -22,7 +22,9 @@ module fp_add #(
     );
 
    localparam MAN_W = DATA_W-EXP_W;
+   localparam BIAS = 2**(EXP_W-1)-1;
    localparam EXTRA = 3;
+   localparam STICKY_BITS = 2*BIAS-1;
 
    // Unpack
    wire                     comp = (op_a[DATA_W-2 -: EXP_W] >= op_b[DATA_W-2 -: EXP_W])? 1'b1 : 1'b0;
@@ -71,12 +73,12 @@ module fp_add #(
 
    // Align significants
    wire [EXP_W-1:0]         diff_Exponent = A_Exponent_reg - B_Exponent_reg;
-   wire [MAN_W+76-1:0]      B_Mantissa_in = {B_Mantissa_reg, 76'd0} >> diff_Exponent;
+   wire [MAN_W+STICKY_BITS-1:0] B_Mantissa_in = {B_Mantissa_reg, {STICKY_BITS{1'b0}}} >> diff_Exponent;
 
    // Extra bits
-   wire                     guard_bit = B_Mantissa_in[75];
-   wire                     round_bit = B_Mantissa_in[74];
-   wire                     sticky_bit = |B_Mantissa_in[73:0];
+   wire                     guard_bit = B_Mantissa_in[STICKY_BITS-1];
+   wire                     round_bit = B_Mantissa_in[STICKY_BITS-2];
+   wire                     sticky_bit = |B_Mantissa_in[STICKY_BITS-3:0];
 
    // pipeline stage 2
    reg                      A_sign_reg2;
@@ -111,7 +113,7 @@ module fp_add #(
          A_Mantissa_reg2 <= A_Mantissa_reg;
 
          B_sign_reg2 <= B_sign_reg;
-         B_Mantissa_reg2 <= B_Mantissa_in[76 +: MAN_W];
+         B_Mantissa_reg2 <= B_Mantissa_in[STICKY_BITS +: MAN_W];
 
          guard_bit_reg <= guard_bit;
          round_bit_reg <= round_bit;
