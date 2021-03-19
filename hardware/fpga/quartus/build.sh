@@ -3,7 +3,7 @@ export ALTERAPATH=/home/iobundle/Intel/Altera_full/18.0
 export LM_LICENSE_FILE=1801@localhost:$ALTERAPATH/../1-MVXX5H_License.dat
 nios=/home/iobundle/Intel/Altera_full/18.0/nios2eds/nios2_command_shell.sh
 
-$nios quartus_sh -t ../fpu.tcl "$1" "$2" "$3" "$4" "$5"
+$nios quartus_sh -t ../$5.tcl "$1" "$2" "$3" "$4" "$5"
 $nios quartus_map --read_settings_files=on --write_settings_files=off $5 -c $5
 $nios quartus_fit --read_settings_files=off --write_settings_files=off $5 -c $5
 $nios quartus_cdb --read_settings_files=off --write_settings_files=off $5 -c $5 --merge=on
