@@ -4,9 +4,9 @@ include ../../asic.mk
 
 RTL_COMPILER:=source /opt/ic_tools/init/init-rc14_25_hf000
 
-run: fpu_synth.v
+run: $(TOP_MODULE)_synth.v
 
-fpu_synth.v: $(VHDR) $(VSRC)
+$(TOP_MODULE)_synth.v: $(VHDR) $(VSRC)
 	echo "set INCLUDE [list $(INCLUDE)]" > inc.tcl
 	echo "set DEFINE [list $(DEFINE)]" > defs.tcl
 	echo "set VSRC [glob $(VSRC)]" > vsrc.tcl
