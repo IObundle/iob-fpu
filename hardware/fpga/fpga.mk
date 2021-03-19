@@ -7,4 +7,4 @@ FPGA_INCLUDE=$(addprefix ../, $(INCLUDE) )
 
 $(FPGA_OBJ): $(CONSTRAINTS) $(VSRC) $(VHDR)
 	mkdir -p $(FPGA_FAMILY)
-	cd $(FPGA_FAMILY); ../build.sh "$(FPGA_VSRC)" "$(FPGA_INCLUDE)" "$(DEFINE)" "$(FPGA_PART)" "$(TOP_MODULE)"
+	cd $(FPGA_FAMILY); ../build.sh "$(TOP_MODULE)" "$(FPGA_PART)" "$(FPGA_VSRC)" "$(FPGA_INCLUDE)" "$(DEFINE)"

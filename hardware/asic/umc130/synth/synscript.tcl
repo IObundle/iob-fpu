@@ -36,9 +36,11 @@ report gates > gates_report.txt
 report area > area_report.txt
 #
 # outputs
-write_hdl -mapped -v2001 > fpu_synth.v
-write_sdc -strict > fpu_synth.sdc
-write_db -to_file fpu_synth.sdc
+set TOP_SYNTH $TOP_MODULE
+append TOP_SYNTH "_synth"
+write_hdl -mapped -v2001 > $TOP_SYNTH.v
+write_sdc -strict > $TOP_SYNTH.sdc
+write_db -to_file $TOP_SYNTH.sdc
 #
 #
 exit
