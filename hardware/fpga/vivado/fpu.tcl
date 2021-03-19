@@ -1,8 +1,9 @@
-set VSRC [lindex $argv 0]
-set HW_INCLUDE [lindex $argv 1]
-set HW_DEFINE [lindex $argv 2]
-set PART [lindex $argv 3]
-set TOP [lindex $argv 4]
+
+set TOP [lindex $argv 0]
+set PART [lindex $argv 1]
+set VSRC [lindex $argv 2]
+set HW_INCLUDE [lindex $argv 3]
+set HW_DEFINE [lindex $argv 4]
 
 puts $VSRC
 
