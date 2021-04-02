@@ -1,4 +1,4 @@
-FPGA_OBJ?=$(FPGA_FAMILY)/fpu_0.qxp
+FPGA_OBJ?=$(FPGA_FAMILY)/$(TOP_MODULE)_0.qxp
 CONSTRAINTS:=$(wildcard *.sdc)
 
 include ../fpga.mk
