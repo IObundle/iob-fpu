@@ -1,5 +1,7 @@
 `timescale 1ns / 1ps
 
+`include "fp_defs.vh"
+
 module fp_mul #(
                 parameter DATA_W = 32,
                 parameter EXP_W = 8
@@ -24,6 +26,43 @@ module fp_mul #(
    localparam MAN_W = DATA_W-EXP_W;
    localparam BIAS = 2**(EXP_W-1)-1;
    localparam EXTRA = 3;
+
+   // Special cases
+   wire                     op_a_nan, op_a_inf, op_a_zero, op_a_sub;
+   fp_special #(
+                .DATA_W(DATA_W),
+                .EXP_W(EXP_W)
+                )
+   special_op_a
+     (
+      .data_in    (op_a),
+
+      .nan        (op_a_nan),
+      .infinite   (op_a_inf),
+      .zero       (op_a_zero),
+      .sub_normal (op_a_sub)
+      );
+
+   wire                     op_b_nan, op_b_inf, op_b_zero, op_b_sub;
+   fp_special #(
+                .DATA_W(DATA_W),
+                .EXP_W(EXP_W)
+                )
+   special_op_b
+     (
+      .data_in    (op_b),
+
+      .nan        (op_b_nan),
+      .infinite   (op_b_inf),
+      .zero       (op_b_zero),
+      .sub_normal (op_b_sub)
+      );
+
+   wire                     special = op_a_nan | op_a_inf | op_b_nan | op_b_inf;
+   wire [DATA_W-1:0]        res_special = (op_a_nan | op_b_nan)? `NAN:
+                                          (op_a_inf & op_b_inf)? `NAN:
+                                        (op_a_zero | op_b_zero)? `NAN:
+                                                                 `INF(op_b[DATA_W-1] ^ op_b[DATA_W-1]);
 
    // Unpack
    wire [MAN_W-1:0]         A_Mantissa = {1'b1, op_a[MAN_W-2:0]};
@@ -145,14 +184,17 @@ module fp_mul #(
    wire [EXP_W-1:0]         Exponent = Exponent_rnd;
    wire                     Sign = Temp_sign_reg2;
 
+   wire [DATA_W-1:0]        res_in  = special? res_special: {Sign, Exponent, Mantissa};
+   wire                     done_in = special? start: done_int3;
+
    // pipeline stage 4
    always @(posedge clk) begin
       if (rst) begin
          res <= {DATA_W{1'b0}};
          done <= 1'b0;
       end else begin
-         res <= {Sign, Exponent, Mantissa};
-         done <= done_int3;
+         res <= res_in;
+         done <= done_in;
       end
    end
 
