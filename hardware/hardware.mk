@@ -1,5 +1,10 @@
 include $(FPU_DIR)/core.mk
 
+#define
+ifeq ($(FPU),)
+DEFINE+=$(defmacro)SPECIAL_CASES
+endif
+
 # include
 INCLUDE+=$(incdir) $(FPU_INC_DIR)
 
