@@ -82,15 +82,13 @@ module fp_div #(
 `endif
 
    // Unpack
-   wire                          comp = (op_a[DATA_W-2 -: EXP_W] >= op_b[DATA_W-2 -: EXP_W])? 1'b1 : 1'b0;
+   wire [MAN_W-1:0]              A_Mantissa = {1'b1, op_a[MAN_W-2:0]};
+   wire [EXP_W-1:0]              A_Exponent = op_a[DATA_W-2 -: EXP_W];
+   wire                          A_sign     = op_a[DATA_W-1];
 
-   wire [MAN_W-1:0]              A_Mantissa = comp? {1'b1, op_a[MAN_W-2:0]} : {1'b1, op_b[MAN_W-2:0]};
-   wire [EXP_W-1:0]              A_Exponent = comp? op_a[DATA_W-2 -: EXP_W] : op_b[DATA_W-2 -: EXP_W];
-   wire                          A_sign = comp? op_a[DATA_W-1] : op_b[DATA_W-1];
-
-   wire [MAN_W-1:0]              B_Mantissa = comp? {1'b1, op_b[MAN_W-2:0]} : {1'b1, op_a[MAN_W-2:0]};
-   wire [EXP_W-1:0]              B_Exponent = comp? op_b[DATA_W-2 -: EXP_W] : op_a[DATA_W-2 -: EXP_W];
-   wire                          B_sign = comp? op_b[DATA_W-1] : op_a[DATA_W-1];
+   wire [MAN_W-1:0]              B_Mantissa = {1'b1, op_b[MAN_W-2:0]};
+   wire [EXP_W-1:0]              B_Exponent = op_b[DATA_W-2 -: EXP_W];
+   wire                          B_sign     = op_b[DATA_W-1];
 
    // pipeline stage 1
    reg                           A_sign_reg;
