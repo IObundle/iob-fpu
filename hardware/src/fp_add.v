@@ -29,6 +29,7 @@ module fp_add #(
    localparam STICKY_BITS = 2*BIAS-1;
 
    // Special cases
+`ifdef SPECIAL_CASES
    wire                     op_a_nan, op_a_inf, op_a_zero, op_a_sub;
    fp_special #(
                 .DATA_W(DATA_W),
@@ -61,8 +62,12 @@ module fp_add #(
 
    wire                     special = op_a_nan | op_a_inf | op_b_nan | op_b_inf;
    wire [DATA_W-1:0]        res_special = (op_a_nan | op_b_nan)? `NAN:
-                                          (op_a_inf & op_b_inf)? ((op_a[DATA_W-1] ^ op_b[DATA_W-1])? `NAN: `INF(op_a[DATA_W-1])):
+                                          (op_a_inf & op_b_inf)? ((op_a[DATA_W-1] ^ op_b[DATA_W-1])? `NAN:
+                                                                                                     `INF(op_a[DATA_W-1])):
+                                                       op_b_inf? ((op_a[DATA_W-1] ^ op_b[DATA_W-1])? `INF(~op_b[DATA_W-1]):
+                                                                                                     `INF(op_b[DATA_W-1])):
                                                                  `INF(op_a[DATA_W-1]);
+`endif
 
    // Unpack
    wire                     comp = (op_a[DATA_W-2 -: EXP_W] >= op_b[DATA_W-2 -: EXP_W])? 1'b1 : 1'b0;
@@ -254,8 +259,13 @@ module fp_add #(
    wire [EXP_W-1:0]         Exponent = exp_adjust_rnd;
    wire                     Sign = A_sign_reg4;
 
+`ifdef SPECIAL_CASES
    wire [DATA_W-1:0]        res_in  = special? res_special: {Sign, Exponent, Mantissa};
    wire                     done_in = special? start: done_int4;
+`else
+   wire [DATA_W-1:0]        res_in  = {Sign, Exponent, Mantissa};
+   wire                     done_in = done_int4;
+`endif
 
    // pipeline stage 5
    always @(posedge clk) begin

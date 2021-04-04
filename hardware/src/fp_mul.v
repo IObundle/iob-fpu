@@ -28,6 +28,7 @@ module fp_mul #(
    localparam EXTRA = 3;
 
    // Special cases
+`ifdef SPECIAL_CASES
    wire                     op_a_nan, op_a_inf, op_a_zero, op_a_sub;
    fp_special #(
                 .DATA_W(DATA_W),
@@ -63,6 +64,7 @@ module fp_mul #(
                                           (op_a_inf & op_b_inf)? `NAN:
                                         (op_a_zero | op_b_zero)? `NAN:
                                                                  `INF(op_b[DATA_W-1] ^ op_b[DATA_W-1]);
+`endif
 
    // Unpack
    wire [MAN_W-1:0]         A_Mantissa = {1'b1, op_a[MAN_W-2:0]};
@@ -184,8 +186,13 @@ module fp_mul #(
    wire [EXP_W-1:0]         Exponent = Exponent_rnd;
    wire                     Sign = Temp_sign_reg2;
 
+`ifdef SPECIAL_CASES
    wire [DATA_W-1:0]        res_in  = special? res_special: {Sign, Exponent, Mantissa};
    wire                     done_in = special? start: done_int3;
+`else
+   wire [DATA_W-1:0]        res_in  = {Sign, Exponent, Mantissa};
+   wire                     done_in = done_int3;
+`endif
 
    // pipeline stage 4
    always @(posedge clk) begin

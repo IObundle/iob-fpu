@@ -42,6 +42,7 @@ module fp_div #(
    end
 
    // Special cases
+`ifdef SPECIAL_CASES
    wire                     op_a_nan, op_a_inf, op_a_zero, op_a_sub;
    fp_special #(
                 .DATA_W(DATA_W),
@@ -77,7 +78,8 @@ module fp_div #(
                                                        op_b_inf? (op_a_inf? `NAN: {DATA_W{1'b0}}):
                                          (op_a_inf & op_b_zero)? `NAN:
                                         (op_a_zero & op_b_zero)? `NAN:
-                                                                 `INF(op_a[DATA_W-1]);
+                                                                 `INF(op_a[DATA_W-1] ^ op_b[DATA_W-1]);
+`endif
 
    // Unpack
    wire                          comp = (op_a[DATA_W-2 -: EXP_W] >= op_b[DATA_W-2 -: EXP_W])? 1'b1 : 1'b0;
@@ -226,8 +228,13 @@ module fp_div #(
    wire [EXP_W-1:0]              Exponent = Exponent_rnd;
    wire                          Sign = Temp_sign_reg2;
 
+`ifdef SPECIAL_CASES
    wire [DATA_W-1:0]             res_in  = special? res_special: {Sign, Exponent, Mantissa};
    wire                          done_in = special? start: (~start & cnt_done);
+`else
+   wire [DATA_W-1:0]             res_in  = {Sign, Exponent, Mantissa};
+   wire                          done_in = ~start & cnt_done;
+`endif
 
    // pipeline stage 4
    always @(posedge clk) begin
