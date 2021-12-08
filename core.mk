@@ -21,17 +21,17 @@ FPGA_FAMILY ?=XCKU
 FPGA_USER ?=$(USER)
 FPGA_SERVER ?=pudim-flan.iobundle.com
 ifeq ($(FPGA_FAMILY),XCKU)
-        FPGA_COMP:=vivado
-        FPGA_PART:=xcku040-fbva676-1-c
+        FPGA_COMP ?=vivado
+        FPGA_PART ?=xcku040-fbva676-1-c
 else #default; ifeq ($(FPGA_FAMILY),CYCLONEV-GT)
-        FPGA_COMP:=quartus
-        FPGA_PART:=5CGTFD9E5F35C7
+        FPGA_COMP ?=quartus
+        FPGA_PART ?=5CGTFD9E5F35C7
 endif
 FPGA_DIR ?= $(FPU_DIR)/hardware/fpga/$(FPGA_COMP)
 ifeq ($(FPGA_COMP),vivado)
-FPGA_LOG:=vivado.log
+FPGA_LOG ?=vivado.log
 else ifeq ($(FPGA_COMP),quartus)
-FPGA_LOG:=quartus.log
+FPGA_LOG ?=quartus.log
 endif
 
 #ASIC
