@@ -23,7 +23,7 @@ module fp_add #(
     output reg [DATA_W-1:0] res
     );
 
-   localparam MAN_W = DATA_W-EXP_W;
+   localparam MAN_W = DATA_W-EXP_W; // 24 for EXP_W = 8
    localparam BIAS = 2**(EXP_W-1)-1;
    localparam EXTRA = 3;
    localparam STICKY_BITS = 2*BIAS-1;
@@ -211,7 +211,7 @@ module fp_add #(
       );
 
    wire [MAN_W+EXTRA-1:0]   Temp_Mantissa = carry_reg? {1'b1, Temp_reg[MAN_W+EXTRA-1:1]} : Temp_reg << lzc;
-   wire [EXP_W-1:0]         exp_adjust = carry_reg? A_Exponent_reg3 + 1'b1 : A_Exponent_reg3 - lzc;
+   wire [EXP_W-1:0]         exp_adjust = carry_reg? A_Exponent_reg3 + 1'b1 : A_Exponent_reg3 - EXP_W'(lzc);
 
    // pipeline stage 4
    reg                      A_sign_reg4;
