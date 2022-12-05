@@ -211,7 +211,7 @@ module fp_add #(
       );
 
    wire [MAN_W+EXTRA-1:0]   Temp_Mantissa = carry_reg? {1'b1, Temp_reg[MAN_W+EXTRA-1:1]} : Temp_reg << lzc;
-   wire [EXP_W-1:0]         exp_adjust = carry_reg? A_Exponent_reg3 + 1'b1 : A_Exponent_reg3 - EXP_W'(lzc);
+   wire [EXP_W-1:0]         exp_adjust = carry_reg? A_Exponent_reg3 + 1'b1 : A_Exponent_reg3 - {{EXTRA{1'b0}},lzc};
 
    // pipeline stage 4
    reg                      A_sign_reg4;

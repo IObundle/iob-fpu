@@ -32,6 +32,6 @@ module round #(
       );
 
    assign mantissa_rnd = mantissa_rnd_int << lzc;
-   assign exponent_rnd = exponent - EXP_W'(lzc);
+   assign exponent_rnd = exponent - {{(EXP_W-$clog2(DATA_W)){1'b0}},lzc};
 
 endmodule
