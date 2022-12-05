@@ -23,7 +23,7 @@ module fp_add #(
     output reg [DATA_W-1:0] res
     );
 
-   localparam MAN_W = DATA_W-EXP_W; // 24 for EXP_W = 8
+   localparam MAN_W = DATA_W-EXP_W;
    localparam BIAS = 2**(EXP_W-1)-1;
    localparam EXTRA = 3;
    localparam STICKY_BITS = 2*BIAS-1;
