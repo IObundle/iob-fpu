@@ -178,7 +178,7 @@ module fp_div #(
       );
 
    wire [MAN_W+EXTRA-1:0]        Mantissa_int = Temp_Mantissa_reg << lzc;
-   wire [EXP_W-1:0]              Exponent_int = Temp_Exponent_reg - lzc;
+   wire [EXP_W-1:0]              Exponent_int = Temp_Exponent_reg - {{EXTRA{1'b0}},lzc};
 
    // pipeline stage 3
    reg                           Temp_sign_reg2;
