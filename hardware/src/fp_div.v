@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 
 `include "fp_defs.vh"
+`define SPECIAL_CASES
 
 module fp_div #(
                 parameter DATA_W = 32,
@@ -27,7 +28,7 @@ module fp_div #(
    localparam BIAS = 2**(EXP_W-1)-1;
    localparam EXTRA = 3;
 
-   localparam END_COUNT = 2*MAN_W+EXTRA+1+4-1; // divider cycle count (2*MAN_W+EXTRA+1) + pipeline stages - 1
+   localparam END_COUNT = 2*MAN_W+EXTRA+3-1; // divider cycle count (2*MAN_W+EXTRA+1) + pipeline stages - 1
 
    reg [$clog2(END_COUNT+1)-1:0] counter;
    wire                          cnt_done = (counter == END_COUNT)? 1'b1: 1'b0;
@@ -40,46 +41,6 @@ module fp_div #(
          counter <= counter + 1'b1;
       end
    end
-
-   // Special cases
-`ifdef SPECIAL_CASES
-   wire                     op_a_nan, op_a_inf, op_a_zero, op_a_sub;
-   fp_special #(
-                .DATA_W(DATA_W),
-                .EXP_W(EXP_W)
-                )
-   special_op_a
-     (
-      .data_in    (op_a),
-
-      .nan        (op_a_nan),
-      .infinite   (op_a_inf),
-      .zero       (op_a_zero),
-      .sub_normal (op_a_sub)
-      );
-
-   wire                     op_b_nan, op_b_inf, op_b_zero, op_b_sub;
-   fp_special #(
-                .DATA_W(DATA_W),
-                .EXP_W(EXP_W)
-                )
-   special_op_b
-     (
-      .data_in    (op_b),
-
-      .nan        (op_b_nan),
-      .infinite   (op_b_inf),
-      .zero       (op_b_zero),
-      .sub_normal (op_b_sub)
-      );
-
-   wire                     special = op_a_nan | op_a_inf | op_b_nan | op_b_inf | op_b_zero;
-   wire [DATA_W-1:0]        res_special = (op_a_nan | op_b_nan)? `NAN:
-                                                       op_b_inf? (op_a_inf? `NAN: {DATA_W{1'b0}}):
-                                         (op_a_inf & op_b_zero)? `NAN:
-                                        (op_a_zero & op_b_zero)? `NAN:
-                                                                 `INF(op_a[DATA_W-1] ^ op_b[DATA_W-1]);
-`endif
 
    // Unpack
    wire [MAN_W-1:0]              A_Mantissa = {1'b1, op_a[MAN_W-2:0]};
@@ -124,6 +85,59 @@ module fp_div #(
       end
    end
 
+   // Special cases
+`ifdef SPECIAL_CASES
+   wire [DATA_W-1:0] op_a_reg = {A_sign_reg,A_Exponent_reg,A_Mantissa_reg[MAN_W-2:0]};         
+   wire op_a_nan, op_a_inf, op_a_zero, op_a_sub;
+   fp_special #(
+                .DATA_W(DATA_W),
+                .EXP_W(EXP_W)
+                )
+   special_op_a
+     (
+      .data_in    (op_a_reg),
+
+      .nan        (op_a_nan),
+      .infinite   (op_a_inf),
+      .zero       (op_a_zero),
+      .sub_normal (op_a_sub)
+      );
+
+   wire [DATA_W-1:0] op_b_reg = {B_sign_reg,B_Exponent_reg,B_Mantissa_reg[MAN_W-2:0]};         
+   wire op_b_nan, op_b_inf, op_b_zero, op_b_sub;
+   fp_special #(
+                .DATA_W(DATA_W),
+                .EXP_W(EXP_W)
+                )
+   special_op_b
+     (
+      .data_in    (op_b_reg),
+
+      .nan        (op_b_nan),
+      .infinite   (op_b_inf),
+      .zero       (op_b_zero),
+      .sub_normal (op_b_sub)
+      );
+
+   wire             special = op_a_nan | op_a_zero | op_a_inf | op_b_nan | op_b_inf | op_b_zero;
+   reg [DATA_W-1:0] res_special;
+
+   always @*
+   begin
+      res_special = `NAN; // Majority of special cases are NAN
+
+      if(op_b_inf & !op_a_inf)
+         res_special = 0;
+      if(op_a_zero) begin
+         if(op_b_zero)
+            res_special = `INF(op_a[DATA_W-1] ^ op_b[DATA_W-1]);
+         else
+            res_special = 0;
+      end
+   end
+
+`endif
+
    // Division
    wire                          Temp_sign = A_sign_reg ^ B_sign_reg;
    wire [EXP_W-1:0]              Temp_Exponent = A_Exponent_reg - B_Exponent_reg + BIAS;
@@ -133,9 +147,9 @@ module fp_div #(
                    )
    div_subshift (
                  .clk       (clk),
+                 .rst       (rst),
 
-                 .en        (~start),
-                 .sign      (1'b0),
+                 .start     (start),
                  .done      (),
 
                  .dividend  ({1'b0, A_Mantissa, {(MAN_W+EXTRA-1){1'b0}}}),
