@@ -178,6 +178,10 @@ module fpu # (
       .clk(clk),
       .rst(rst),
 
+      .overflow(),
+      .underflow(),
+      .exception(),
+
       .start(add_start),
       .done(add_done),
 
@@ -195,6 +199,10 @@ module fpu # (
       .clk(clk),
       .rst(rst),
 
+      .overflow(),
+      .underflow(),
+      .exception(),
+
       .start(mul_start),
       .done(mul_done),
 
@@ -211,6 +219,10 @@ module fpu # (
      (
       .clk(clk),
       .rst(rst),
+
+      .overflow(),
+      .underflow(),
+      .exception(),
 
       .start(div_start),
       .done(div_done),
