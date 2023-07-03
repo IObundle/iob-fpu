@@ -17,7 +17,7 @@ module fp_special #(
 
    wire                sign = data_in[DATA_W-1];
    wire [EXP_W-1:0]    exponent = data_in[DATA_W-2 -: EXP_W];
-   wire [MAN_W-1:0]    mantissa = data_in[MAN_W-2:0];
+   wire [MAN_W-2:0]    mantissa = data_in[MAN_W-2:0];
 
    wire                exp_all_ones = &exponent;
    wire                exp_zero = ~|exponent;
