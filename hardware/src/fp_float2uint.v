@@ -59,7 +59,7 @@ module fp_float2uint
    assign s_12 = -8'd127;
    assign s_13 = s_10[22:0];
    assign s_14 = 8'd0;
-   assign s_15 = s_16 - s_20;
+   assign s_15 = s_16 - {7'h0,s_20};
    assign s_16 = s_17 - s_18;
    assign s_17 = 8'd32;
    assign s_18 = s_7?s_19:s_8;

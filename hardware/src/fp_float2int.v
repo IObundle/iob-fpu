@@ -74,7 +74,7 @@ module fp_float2int
    assign s_15 = -8'd127;
    assign s_16 = s_13[22:0];
    assign s_17 = 8'd0;
-   assign s_18 = s_19 - s_23;
+   assign s_18 = s_19 - {7'h0,s_23};
    assign s_19 = s_20 - s_21;
    assign s_20 = 8'd32;
    assign s_21 = s_10?s_22:s_11;

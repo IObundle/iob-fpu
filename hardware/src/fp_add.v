@@ -70,7 +70,19 @@ module fp_add #(
 `endif
 
    // Unpack
-   wire                     comp = (op_a[DATA_W-2 -: EXP_W] >= op_b[DATA_W-2 -: EXP_W])? 1'b1 : 1'b0;
+   //wire                     comp = (op_a[DATA_W-2 -: EXP_W] >= op_b[DATA_W-2 -: EXP_W])? 1'b1 : 1'b0;
+
+   reg comp;
+   always @*
+   begin
+      comp = 1'b0;
+      if(op_a[DATA_W-2 -: EXP_W] == op_b[DATA_W-2 -: EXP_W]) begin
+         if(op_a[MAN_W-2:0] > op_b[MAN_W-2:0])
+            comp = 1'b1;
+      end
+      if(op_a[DATA_W-2 -: EXP_W] > op_b[DATA_W-2 -: EXP_W])
+         comp = 1'b1;      
+   end
 
    wire [MAN_W-1:0]         A_Mantissa = comp? {1'b1, op_a[MAN_W-2:0]} : {1'b1, op_b[MAN_W-2:0]};
    wire [EXP_W-1:0]         A_Exponent = comp? op_a[DATA_W-2 -: EXP_W] : op_b[DATA_W-2 -: EXP_W];
@@ -167,8 +179,7 @@ module fp_add #(
    end
 
    // Addition
-   wire [MAN_W:0]           Temp = (A_sign_reg2 ^ B_sign_reg2)? A_Mantissa_reg2 - B_Mantissa_reg2:
-                                                                A_Mantissa_reg2 + B_Mantissa_reg2;
+   wire [MAN_W:0]           Temp = (A_sign_reg2 ^ B_sign_reg2)? A_Mantissa_reg2 - B_Mantissa_reg2 : A_Mantissa_reg2 + B_Mantissa_reg2;
    wire                     carry = Temp[MAN_W];
 
    // pipeline stage 3

@@ -464,10 +464,10 @@ module fp_int2float
    dq #(24, 1) dq_s_20 (clk, s_20, s_21);
    assign s_21 = s_391?s_22:s_390;
    assign s_22 = s_23[24:1];
-   assign s_23 = s_377?s_24:s_376;
+   assign s_23 = s_377?s_24:{1'b0,s_376};
    dq #(25, 1) dq_s_24 (clk, s_24, s_25);
-   assign s_25 = s_26 + s_375;
-   assign s_26 = s_27;
+   assign s_25 = s_26 + {24'h0,s_375};
+   assign s_26 = {1'b0,s_27};
    assign s_27 = s_28[31:8];
    dq #(32, 1) dq_s_28 (clk, s_28, s_29);
    assign s_29 = s_30 << s_34;
@@ -826,7 +826,7 @@ module fp_int2float
    dq #(1, 1) dq_s_382 (clk, s_382, s_383);
    assign s_383 = s_28[6];
    dq #(1, 1) dq_s_384 (clk, s_384, s_385);
-   assign s_385 = s_386 != s_387;
+   assign s_385 = s_386[0] != s_387;
    assign s_386 = s_28[5:0];
    assign s_387 = 1'd0;
    dq #(1, 1) dq_s_388 (clk, s_388, s_389);
@@ -838,9 +838,9 @@ module fp_int2float
    dq #(1, 5) dq_s_394 (clk, s_394, s_3);
    assign s_395 = s_396 + s_401;
    dq #(8, 1) dq_s_396 (clk, s_396, s_397);
-   assign s_397 = s_398 + s_391;
+   assign s_397 = s_398 + {7'h0,s_391};
    dq #(8, 2) dq_s_398 (clk, s_398, s_399);
-   assign s_399 = s_400 - s_34;
+   assign s_399 = s_400 - {2'h0,s_34};
    assign s_400 = 8'd31;
    assign s_401 = 7'd127;
    assign s_402 = s_20[22:0];
